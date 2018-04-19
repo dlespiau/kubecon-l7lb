@@ -1,20 +1,34 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sync/atomic"
 	"time"
 )
 
-var service struct {
+// Service holds all about the service.
+var Service struct {
 	duration Rander
+	Info     struct {
+		HostnameRequestCount uint64 `json:"request_count"`
+	}
 }
 
 func ready(w http.ResponseWriter, r *http.Request) {
+}
+
+func info(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(&Service.Info)
+	if r.Method == "POST" {
+		// Also reset info when we receive a POST request.
+		atomic.StoreUint64(&Service.Info.HostnameRequestCount, 0)
+	}
 }
 
 func echo(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +46,8 @@ func hostname(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	io.WriteString(w, string(body))
-	time.Sleep(time.Duration(service.duration.Rand() * float64(time.Millisecond)))
+	time.Sleep(time.Duration(Service.duration.Rand() * float64(time.Millisecond)))
+	atomic.AddUint64(&Service.Info.HostnameRequestCount, 1)
 }
 
 func main() {
@@ -45,16 +60,17 @@ func main() {
 
 	switch *durationModel {
 	case "zero":
-		service.duration = &Constant{0}
+		Service.duration = &Constant{0}
 	case "constant":
-		service.duration = &Constant{*constant}
+		Service.duration = &Constant{*constant}
 	case "log-normal":
-		service.duration = &LogNormal{Mu: *mu, Sigma: *sigma}
+		Service.duration = &LogNormal{Mu: *mu, Sigma: *sigma}
 	default:
 		log.Fatalf("unknown duration model: %s", *durationModel)
 	}
 
 	http.HandleFunc("/ready", ready)
+	http.HandleFunc("/info", info)
 	http.HandleFunc("/echo", echo)
 	http.HandleFunc("/hostname", hostname)
 	log.Fatal(http.ListenAndServe(*listen, nil))
