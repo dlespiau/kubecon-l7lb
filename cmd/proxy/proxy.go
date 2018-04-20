@@ -13,8 +13,8 @@ import (
 	"github.com/cespare/xxhash"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/dlespiau/kubecon-2018/pkg/affinity"
-	k8s "github.com/dlespiau/kubecon-2018/pkg/kubernetes"
+	"github.com/dlespiau/kubecon-l7lb/pkg/affinity"
+	k8s "github.com/dlespiau/kubecon-l7lb/pkg/kubernetes"
 )
 
 // xxHash for the ring.
