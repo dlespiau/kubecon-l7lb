@@ -42,9 +42,10 @@ func proxyTransport(keepAlive bool) http.RoundTripper {
 }
 
 type proxy struct {
-	resolver affinity.Resolver
-	header   string
-	reverse  httputil.ReverseProxy
+	resolver  affinity.Resolver
+	header    string
+	reverse   httputil.ReverseProxy
+	noForward bool
 }
 
 func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +63,10 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.URL.Host = endpoint.Address
 	r.URL.Scheme = "http"
 
+	if p.noForward {
+		return
+	}
+
 	p.reverse.ServeHTTP(w, r)
 }
 
@@ -72,6 +77,7 @@ func main() {
 	listen := flag.String("proxy.listen", ":8081", "address the proxy should listen on")
 	header := flag.String("proxy.header", "X-Affinity", "name of the HTTP header taken as input")
 	keepAlive := flag.Bool("proxy.keep-alive", true, "whether the proxy should keep its connections to endpoints alive")
+	noForward := flag.Bool("proxy.no-forward", false, "don't forward request downstream (debug)")
 	flag.Parse()
 
 	log.SetLevel(log.DebugLevel)
@@ -107,8 +113,9 @@ func main() {
 	watcher.Start(make(<-chan interface{}))
 
 	log.Fatal(http.ListenAndServe(*listen, &proxy{
-		resolver: resolver,
-		header:   *header,
+		noForward: *noForward,
+		resolver:  resolver,
+		header:    *header,
 		reverse: httputil.ReverseProxy{
 			Director:  proxyDirector,
 			Transport: proxyTransport(*keepAlive),
