@@ -7,6 +7,10 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"os/signal"
+	"sort"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/buraksezer/consistent"
@@ -41,11 +45,39 @@ func proxyTransport(keepAlive bool) http.RoundTripper {
 	}
 }
 
+type proxyStats struct {
+	sync.Mutex
+	// Maps key:endpoint -> number of requests
+	requests map[string]int
+}
+
 type proxy struct {
 	resolver  affinity.Resolver
 	header    string
 	reverse   httputil.ReverseProxy
 	noForward bool
+	stats     proxyStats
+}
+
+func (p *proxy) printStats() {
+	type stat struct {
+		key   string
+		value int
+	}
+	var results []stat
+
+	p.stats.Lock()
+	for key, requests := range p.stats.requests {
+		results = append(results, stat{key, requests})
+	}
+	p.stats.Unlock()
+
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].key < results[j].key
+	})
+	for i := range results {
+		fmt.Printf("%s: %d\n", results[i].key, results[i].value)
+	}
 }
 
 func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -59,13 +91,19 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("%s -> %s\n", key, endpoint.Address)
 
-	r.Host = endpoint.Address
-	r.URL.Host = endpoint.Address
-	r.URL.Scheme = "http"
+	// Update stats. XXX make it faster!
+	p.stats.Lock()
+	p.stats.requests[fmt.Sprintf("%s-%s", key, endpoint.Address)]++
+	p.stats.Unlock()
 
+	// Forward request to endpoint.
 	if p.noForward {
 		return
 	}
+
+	r.Host = endpoint.Address
+	r.URL.Host = endpoint.Address
+	r.URL.Scheme = "http"
 
 	p.reverse.ServeHTTP(w, r)
 }
@@ -112,7 +150,7 @@ func main() {
 
 	watcher.Start(make(<-chan interface{}))
 
-	log.Fatal(http.ListenAndServe(*listen, &proxy{
+	proxy := &proxy{
 		noForward: *noForward,
 		resolver:  resolver,
 		header:    *header,
@@ -120,5 +158,19 @@ func main() {
 			Director:  proxyDirector,
 			Transport: proxyTransport(*keepAlive),
 		},
-	}))
+		stats: proxyStats{
+			requests: make(map[string]int),
+		},
+	}
+
+	// Print stats on SIGUSR1
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGUSR1)
+	go func() {
+		for range signals {
+			proxy.printStats()
+		}
+	}()
+
+	log.Fatal(http.ListenAndServe(*listen, proxy))
 }
