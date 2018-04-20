@@ -88,20 +88,23 @@ func main() {
 	}
 
 	resolver := affinity.NewBoundedLoadRing(
-		client,
 		consistent.Config{
 			Hasher:            hasher{},
 			PartitionCount:    71,
 			ReplicationFactor: 20,
 			Load:              1.25,
-		},
-		affinity.Service{
+		})
+	watcher := affinity.EndpointWatcher{
+		Client: client,
+		Service: affinity.Service{
 			Namespace: *namespace,
 			Name:      *service,
 			Port:      "8080",
-		})
+		},
+		Receiver: resolver,
+	}
 
-	resolver.Start(make(<-chan interface{}))
+	watcher.Start(make(<-chan interface{}))
 
 	log.Fatal(http.ListenAndServe(*listen, &proxy{
 		resolver: resolver,
