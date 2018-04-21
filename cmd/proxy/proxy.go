@@ -103,6 +103,17 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func resolverFromName(name string) affinity.Resolver {
+	switch name {
+	case "consistent":
+		return affinity.NewHashRing()
+	case "bounded-load":
+		return affinity.NewBoundedLoadRing()
+	default:
+		return nil
+	}
+}
+
 func main() {
 	kubeconfig := flag.String("k8s.kubeconfig", "", "(optional) absolute path to the kubeconfig file")
 	namespace := flag.String("k8s.namespace", "default", "namespace of the service to load balance")
@@ -110,6 +121,7 @@ func main() {
 	listen := flag.String("proxy.listen", ":8081", "address the proxy should listen on")
 	header := flag.String("proxy.header", "X-Affinity", "name of the HTTP header taken as input")
 	keepAlive := flag.Bool("proxy.keep-alive", true, "whether the proxy should keep its connections to endpoints alive")
+	method := flag.String("proxy.method", "bounded-load", "which load balancing method should be used")
 	noForward := flag.Bool("proxy.no-forward", false, "don't forward request downstream (debug)")
 	flag.Parse()
 
@@ -126,7 +138,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	resolver := affinity.NewBoundedLoadRing()
+	resolver := resolverFromName(*method)
+	if resolver == nil {
+		log.Fatal("unknown load balancing method: %s", *method)
+	}
+
 	watcher := affinity.EndpointWatcher{
 		Client: client,
 		Service: affinity.Service{
