@@ -20,6 +20,7 @@ func (e *Endpoint) String() string {
 // Call Release on the Endpoint returned by Resolve once the request has been
 // handled.
 type Resolver interface {
+	SetEndpoints([]Endpoint)
 	Resolve(key string) *Endpoint
 	Release(endpoint *Endpoint)
 }

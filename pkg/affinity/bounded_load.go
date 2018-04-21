@@ -35,8 +35,8 @@ func NewBoundedLoadRing() *BoundedLoadRing {
 	}
 }
 
-// setEndpoints implements endpointReceiver.
-func (r *BoundedLoadRing) setEndpoints(endpoints []Endpoint) {
+// SetEndpoints implements Resolver.
+func (r *BoundedLoadRing) SetEndpoints(endpoints []Endpoint) {
 	// Build the list of old endpoints.
 	old := r.consistent.Hosts()
 

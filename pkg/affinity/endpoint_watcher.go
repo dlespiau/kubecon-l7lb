@@ -13,15 +13,11 @@ import (
 	client "k8s.io/client-go/kubernetes"
 )
 
-type endpointReceiver interface {
-	setEndpoints([]Endpoint)
-}
-
 // EndpointWatcher load balances requests.
 type EndpointWatcher struct {
 	Client   *client.Clientset
 	Service  Service
-	Receiver endpointReceiver
+	Receiver Resolver
 }
 
 func (w *EndpointWatcher) makeEndpoints(subsets []corev1.EndpointSubset) []Endpoint {
@@ -75,9 +71,9 @@ func (w *EndpointWatcher) Start(close <-chan interface{}) {
 					fallthrough
 				case watch.Modified:
 					members := w.makeEndpoints(endpoints.Subsets)
-					w.Receiver.setEndpoints(members)
+					w.Receiver.SetEndpoints(members)
 				case watch.Deleted:
-					w.Receiver.setEndpoints(nil)
+					w.Receiver.SetEndpoints(nil)
 				case watch.Error:
 					// XXX: log a better error. Maybe we lost the connection with the API
 					// server? Should probably retry with backoff.
