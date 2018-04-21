@@ -16,6 +16,10 @@ func (e *Endpoint) String() string {
 }
 
 // Resolver is an interface resolving a key into an Endpoint.
+//
+// Call Release on the Endpoint returned by Resolve once the request has been
+// handled.
 type Resolver interface {
 	Resolve(key string) *Endpoint
+	Release(endpoint *Endpoint)
 }

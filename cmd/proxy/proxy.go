@@ -13,20 +13,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/buraksezer/consistent"
-	"github.com/cespare/xxhash"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dlespiau/kubecon-l7lb/pkg/affinity"
 	k8s "github.com/dlespiau/kubecon-l7lb/pkg/kubernetes"
 )
-
-// xxHash for the ring.
-type hasher struct{}
-
-func (h hasher) Sum64(data []byte) uint64 {
-	return xxhash.Sum64(data)
-}
 
 func proxyDirector(req *http.Request) {}
 
@@ -98,6 +89,7 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Forward request to endpoint.
 	if p.noForward {
+		p.resolver.Release(endpoint)
 		return
 	}
 
@@ -106,6 +98,9 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.URL.Scheme = "http"
 
 	p.reverse.ServeHTTP(w, r)
+
+	p.resolver.Release(endpoint)
+
 }
 
 func main() {
@@ -131,13 +126,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	resolver := affinity.NewBoundedLoadRing(
-		consistent.Config{
-			Hasher:            hasher{},
-			PartitionCount:    71,
-			ReplicationFactor: 20,
-			Load:              1.25,
-		})
+	resolver := affinity.NewBoundedLoadRing()
 	watcher := affinity.EndpointWatcher{
 		Client: client,
 		Service: affinity.Service{
