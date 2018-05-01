@@ -61,6 +61,7 @@ func (p *proxy) printStats() {
 	for key, requests := range p.stats.requests {
 		results = append(results, stat{key, requests})
 	}
+	p.stats.requests = make(map[string]int)
 	p.stats.Unlock()
 
 	sort.Slice(results, func(i, j int) bool {
