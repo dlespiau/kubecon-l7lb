@@ -81,8 +81,6 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	endpoint := p.resolver.Resolve(key)
 
-	fmt.Printf("%s -> %s\n", key, endpoint.Address)
-
 	// Update stats. XXX make it faster!
 	p.stats.Lock()
 	p.stats.requests[fmt.Sprintf("%s-%s", key, endpoint.Address)]++
