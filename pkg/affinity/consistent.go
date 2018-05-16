@@ -5,7 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/dlespiau/consistent"
+	"github.com/dlespiau/kubecon-consistent"
 )
 
 // HashRing is a service Resolver using consistent hashing.

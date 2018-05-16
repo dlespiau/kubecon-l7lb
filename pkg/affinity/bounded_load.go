@@ -5,7 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/dlespiau/consistent"
+	"github.com/dlespiau/kubecon-consistent"
 )
 
 // BoundedLoadRing is a service Resolver using consistent hashing with bounded load.

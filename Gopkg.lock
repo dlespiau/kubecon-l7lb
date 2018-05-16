@@ -9,7 +9,7 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/dlespiau/consistent"
+  name = "github.com/dlespiau/kubecon-consistent"
   packages = ["."]
   revision = "a5f64e8e7b66904cd460a4cfb4422f77874d7654"
 
@@ -324,6 +324,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7a3651601d06ddb0683e7f898fafdcea7d64a1d7e941cb67894e9734932f3161"
+  inputs-digest = "29a040dd8255c968731d15586cdcd58c02c91fda557dcda3bdf210842b92f9d2"
   solver-name = "gps-cdcl"
   solver-version = 1
