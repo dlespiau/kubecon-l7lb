@@ -1,3 +1,8 @@
+# **Update**
+
+This repository contains demo code used for a Kubecon talk. I have started
+a more production ready project: https://github.com/dlespiau/balance.
+
 # L7 Load Balancing without a Service Mesh
 
 This reposity contains the support code for my Kubecon Talk, [The Untapped
